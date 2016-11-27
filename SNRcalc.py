@@ -147,12 +147,14 @@ def ringdown_SNR_calc(total_mass,mass_ratio, z, a, frq, hf):
 	return outdict
 
 
+
 """
 inspiral_local_SNR_calc numerically calculates the SNR of a given binary black hole realized during the inspiral phase of merger. This is based on Flanagan and Hughes (1998) with some small additions. 
 
 
 inspiral_local_SNR_calc takes the following arguments:
 
+type1,type2 (string) --> 'BH','NS','WD', this integrator can currently handle one set of object types
 total_mass (Array-like) --> Solar Masses, in LISA reference frame
 mass_ratio (Array-like)
 Distance   (Array-like) --> pc
@@ -161,7 +163,18 @@ frq (1D array) --> Hertz,  frequency value of each noise curve point.
 hf (1D array) --> per root Hertz,  one-sided power spectral density of the noise in the detector
  
 """
-def inspiral_local_SNR_calc(total_mass,mass_ratio, D, start_time, end_time, frq, hf):
+def inspiral_local_SNR_calc(type1, type2,total_mass,mass_ratio, D, start_time, end_time, frq, hf):
+	if type1 != 'BH' and type1 != 'NS' and type1 != 'WD':
+		return 'Error: wrong object1 code'
+	if type2 != 'BH' and type2 != 'NS' and type2 != 'WD':
+		return 'Error: wrong object2 code'	
+	if type1 == 'BH':
+		if type2 != 'BH':
+			return 'Error: incapatible object types'
+	elif type1 == 'WD' or type1 == 'NS':
+		if type2 == 'BH':
+			return 'Error: incapatible object types'
+
 	#convert values to geometricized units
 	frq = frq/c
 	hf = hf*c**(1.0/2.0)
@@ -171,9 +184,17 @@ def inspiral_local_SNR_calc(total_mass,mass_ratio, D, start_time, end_time, frq,
 	D = D*3.086e16
 
 	reduced_mass = np.multiply(total_mass,mass_ratio)/(1.0+mass_ratio)**2.0
-	mrgfrq = 0.02/total_mass
-
-
+	
+	if type1 == 'BH':
+		mrgfrq = 0.02/total_mass
+	pdb.set_trace()
+	if type1 == 'WD' or type1 == 'NS':
+		m1 = total_mass/(1.0+mass_ratio)
+		m2 = np.multiply(mass_ratio,total_mass)/(1.0+mass_ratio)
+		r1 = radius_func(type1, m1*c*c/G)
+		r2 = radius_func(type2, m2*c*c/G)
+		mrgfrq = (1.0/(4.0*pi**2.0)*total_mass/(np.add(r1,r2))**3.0)**0.5
+		
 
 	fstart = ((mrgfrq**(-8.0/3.0))+256.0/5.0*(pi**(8.0/3.0))*reduced_mass*(total_mass**(2.0/3.0))*start_time)**(-3.0/8.0)
 	fend = ((mrgfrq**(-8.0/3.0))+256.0/5.0*(pi**(8.0/3.0))*reduced_mass*(total_mass**(2.0/3.0))*end_time)**(-3.0/8.0)
@@ -284,18 +305,23 @@ def Ialphafunc(f_m, alpha, frq, hf):
 	integrand = f_m**alpha/hfnoise
 	return integrand
 
+def radius_func(type1, mass):
+	#http://farside.ph.utexas.edu/teaching/sm1/lectures/node87.html
+	if type1 == 'WD':
+		return (9.0*pi)**(2.0/3.0)*hbar**2.0/(8.0*m_e*G*m_p**(5.0/3.0)*mass**(1.0/3.0))
+	if type1 == 'NS':
+		return (9.0*pi)**(2.0/3.0)*hbar**2.0/(8.0*m_n*G*m_p**(5.0/3.0)*mass**(1.0/3.0))
 
-#D = np.logspace(1.0, 7.0, 5)
-#total_mass = np.logspace(-2.0,1.5,5)
-#mass_ratio = np.linspace(0.1, 1.0, 5)
-#a = np.linspace(0.6, 0.98, 5)
-#start_time = 1.0
-#end_time = 0.0
-#frq = np.logspace(-8.0, 1.0, 1000)
-#hf = np.full(1000,1e-20)
-
-
-#out = inspiral_local_SNR_calc(total_mass, mass_ratio, D, start_time, end_time, frq, hf)
-#pdb.set_trace()
+if __name__ == '__main__':
+	D = np.logspace(1.0, 7.0, 5)
+	total_mass = np.logspace(-2.0,1.5,5)
+	mass_ratio = np.linspace(0.1, 1.0, 5)
+	a = np.linspace(0.6, 0.98, 5)
+	start_time = 1.0
+	end_time = 0.0
+	frq = np.logspace(-8.0, 1.0, 1000)
+	hf = np.full(1000,1e-20)
+	out = inspiral_local_SNR_calc(total_mass, mass_ratio, D, start_time, end_time, frq, hf)
+	#pdb.set_trace()
 
 
